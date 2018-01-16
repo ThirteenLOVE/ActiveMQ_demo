@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:jms="http://www.springframework.org/schema/jms"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+     http://www.springframework.org/schema/beans/spring-beans-3.0.xsd  
+     http://www.springframework.org/schema/context  
+     http://www.springframework.org/schema/context/spring-context-3.0.xsd  
+    http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd  
+    http://www.springframework.org/schema/jms http://www.springframework.org/schema/jms/spring-jms-3.0.xsd">
+
+	<!-- Spring提供的JMS工具类，它可以进行消息发送、接收等 -->
+	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+		<!-- 这个connectionFactory对应的是我们定义的Spring提供的那个ConnectionFactory对象 -->
+		<property name="connectionFactory" ref="connectionFactory"/>
+	</bean>
+
+	<!-- 真正可以产生Connection的ConnectionFactory，由对应的 JMS服务厂商提供-->
+	<!--<bean id="targetConnectionFactory" class="org.apache.activemq.spring.ActiveMQConnectionFactory">-->
+	<bean id="targetConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
+		<property name="brokerURL" value="tcp://10.12.30.85:61616"/>
+		<property name="userName" value="admin" />
+		<property name="password" value="admin" />
+		<property name="useAsyncSend" value="true"/>
+	</bean>
+
+	<!-- Spring用于管理真正的ConnectionFactory的ConnectionFactory -->
+	<bean id="connectionFactory" class="org.springframework.jms.connection.SingleConnectionFactory">
+		<!-- 目标ConnectionFactory对应真实的可以产生JMS Connection的ConnectionFactory -->
+		<property name="targetConnectionFactory" ref="targetConnectionFactory"/>
+	</bean>
+
+	<!--这个是队列目的地-->
+	<bean id="subscribeQueue" class="org.apache.activemq.command.ActiveMQQueue">
+		<constructor-arg>
+			<value>MailQueue</value>
+		</constructor-arg>
+	</bean>
+	<!-- 消息监听器 -->
+	<bean id="subscribeReceiver" class="com.activityMQ.reciveService.reciveService"/>
+	<!-- 消息监听容器 --> 
+	<bean id="subscribeContainer" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="connectionFactory"/>
+		<property name="destination" ref="subscribeQueue"/>
+		<property name="messageListener" ref="subscribeReceiver"/>
+		<!-- 消息监听器消费者并发处理数量设置 --> 
+		<property name="concurrentConsumers" value="2"/>
+	</bean>
+	
+</beans>
